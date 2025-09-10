@@ -22,10 +22,13 @@
 package org.polyfrost.polyui
 
 import org.apache.logging.log4j.LogManager
+import org.polyfrost.polyui.color.Color
 import org.polyfrost.polyui.color.Colors
 import org.polyfrost.polyui.color.DarkTheme
 import org.polyfrost.polyui.color.LightTheme
 import org.polyfrost.polyui.color.PolyColor
+import org.polyfrost.polyui.color.hex
+import org.polyfrost.polyui.color.rgba
 import org.polyfrost.polyui.component.Component
 import org.polyfrost.polyui.component.Inputtable
 import org.polyfrost.polyui.component.extensions.radius
@@ -36,8 +39,10 @@ import org.polyfrost.polyui.component.impl.Group
 import org.polyfrost.polyui.data.Cursor
 import org.polyfrost.polyui.data.Font
 import org.polyfrost.polyui.data.FontFamily
+import org.polyfrost.polyui.data.GrImage
 import org.polyfrost.polyui.data.PolyImage
 import org.polyfrost.polyui.input.*
+import org.polyfrost.polyui.layer.LayerHolder
 import org.polyfrost.polyui.layout.FlexLayoutController
 import org.polyfrost.polyui.layout.LayoutController
 import org.polyfrost.polyui.renderer.FramebufferController
@@ -47,6 +52,7 @@ import org.polyfrost.polyui.unit.Align
 import org.polyfrost.polyui.unit.Vec2
 import org.polyfrost.polyui.utils.*
 import kotlin.math.min
+import kotlin.system.exitProcess
 
 // todo rewrite this doc
 
@@ -92,6 +98,7 @@ class PolyUI(
     masterAlignment: Align = Align(line = Align.Line.Start, pad = Vec2.ZERO),
     colors: Colors = DarkTheme(),
     size: Vec2 = Vec2.ZERO,
+	val layers: ArrayList<LayerHolder> = arrayListOf<LayerHolder>(),
 ) {
     @JvmOverloads
     constructor(
@@ -103,8 +110,9 @@ class PolyUI(
         backgroundColor: PolyColor? = null,
         masterAlignment: Align = Align(line = Align.Line.Start, pad = Vec2.ZERO),
         colors: Colors = DarkTheme(),
-        width: Float, height: Float
-    ) : this(components = components, renderer, settings, inputManager, translator, backgroundColor, masterAlignment, colors, Vec2(width, height))
+        width: Float, height: Float,
+	    layers: ArrayList<LayerHolder> = arrayListOf<LayerHolder>(),
+    ) : this(components = components, renderer, settings, inputManager, translator, backgroundColor, masterAlignment, colors, Vec2(width, height), layers)
 
     init {
         renderer.init()
@@ -179,6 +187,8 @@ class PolyUI(
 
     inline val pixelRatio get() = window?.pixelRatio ?: 1f
 
+	inline val isLayeredMode get() = settings.layeredUI
+
     /**
      * Access the system clipboard as a string.
      *
@@ -193,8 +203,10 @@ class PolyUI(
     /**
      * This is the root layout of the UI. It is the parent of all other layouts.
      */
-    val master = if (backgroundColor == null) Group(size = size, children = components, alignment = masterAlignment)
-    else Block(size = size, children = components, alignment = masterAlignment, color = backgroundColor).radius(0f).also { it.palette = colors.page.bg }
+    val master = /*LayerHolder(*/
+	    if (backgroundColor == null) Group(size = size, children = components, alignment = masterAlignment)
+	    else Block(size = size, children = components, alignment = masterAlignment, color = backgroundColor).radius(0f).also { it.palette = colors.page.bg }
+	/*).also { layers.add(it) }*/
 
 
     val inputManager = inputManager?.with(master) ?: InputManager(master, KeyBinder(this.settings), this.settings)
@@ -407,13 +419,11 @@ class PolyUI(
         debugger.nframes++
         delta = clock.delta
         if (master.needsRedraw) {
-            renderer.beginFrame(master.width, master.height, pixelRatio)
-            window?.preRender(renderer)
-            master.draw()
-            debugger.takeReadings()
-            if (settings.debug) debugger.render()
-            window?.postRender(renderer)
-            renderer.endFrame()
+			if (!isLayeredMode) {
+				renderFlat()
+			} else {
+				renderLayered()
+			}
             drew = true
         } else {
             drew = false
@@ -429,6 +439,49 @@ class PolyUI(
         }
         return if (master.needsRedraw) 0L else wait
     }
+
+	private fun renderFlat() {
+		renderer.beginFrame(master.width, master.height, pixelRatio)
+		window?.preRender(renderer)
+		master.draw(false)
+		debugger.takeReadings()
+		if (settings.debug) debugger.render()
+		window?.postRender(renderer)
+		renderer.endFrame()
+	}
+
+	private fun renderLayered() {
+		require(canUseFramebuffers && isLayeredMode)
+
+		window?.preRender(renderer)
+		master.drawResult = false
+		master.draw(true)
+
+		layers.forEach {
+//			it.needsRedraw = true
+			it.draw(true)
+		}
+
+		debugger.takeReadings()
+
+		renderer.beginFrame(master.width, master.height, pixelRatio)
+		renderer.image(GrImage.get(master.framebuffer!!)!!, master.x, master.y, master.width, master.height)
+//		renderer.rect(0f, 0f, 400f, 20f, rgba(0,0,0))
+//		renderer.text(defaultFonts.get(Font.Weight.Regular, false), 5f, 5f, "${GrImage.get(master.framebuffer!!)!!.nativeData}", Color.WHITE, 14f)
+
+		layers.fastEach {
+			val img = GrImage.get(it.framebuffer!!)!!
+			renderer.image(img, master.x, master.y, master.width, master.height)
+//			renderer.rect(it.x, it.y, it.width, 20f, rgba(0,0,0))
+//			renderer.text(defaultFonts.get(Font.Weight.Regular, false), it.x+5f, it.y+5f, "${img.nativeData}, ${img.size}", Color.WHITE, 14f)
+		}
+		if (settings.debug) debugger.render()
+		renderer.endFrame()
+		window?.postRender(renderer)
+
+//		println(layers.size)
+
+	}
 
     /**
      * add a function that is called every [nanos] nanoseconds.

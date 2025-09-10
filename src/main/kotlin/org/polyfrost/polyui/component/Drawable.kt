@@ -30,6 +30,7 @@ import org.polyfrost.polyui.color.PolyColor
 import org.polyfrost.polyui.component.extensions.countChildren
 import org.polyfrost.polyui.component.extensions.setPalette
 import org.polyfrost.polyui.data.Framebuffer
+import org.polyfrost.polyui.layer.LayerHolder
 import org.polyfrost.polyui.operations.Recolor
 import org.polyfrost.polyui.renderer.FramebufferController
 import org.polyfrost.polyui.unit.Align
@@ -206,6 +207,11 @@ abstract class Drawable(
             needsRedraw = true
         }
 
+	var useFramebuffer: Boolean = false
+
+	/** to draw the result of this drawable's framebuffer. */
+	var drawResult: Boolean = true
+
     /**
      * The alpha value of this drawable.
      *
@@ -223,7 +229,7 @@ abstract class Drawable(
 
     @Locking
     @Synchronized
-    override fun draw() {
+    override fun draw(separateFrame: Boolean) {
         if (!renders) return
         require(initialized) { "Drawable $name is not initialized!" }
 
@@ -233,24 +239,29 @@ abstract class Drawable(
         if (binds) {
             renderer as FramebufferController
             if (!needsRedraw) {
-                renderer.drawFramebuffer(framebuffer, x, y)
+	            if (drawResult) renderer.drawFramebuffer(framebuffer, x, y)
                 return
             }
-            renderer.bindFramebuffer(framebuffer)
+	        renderer.bindFramebuffer(framebuffer)
+	        renderer.clearFramebuffer(framebuffer)
             fbc++
         }
 
-        needsRedraw = false
-        preRender(polyUI.delta)
-        render()
-        children?.fastEach(Component::draw)
-        postRender()
+
+	    //TODO: add back redraw
+//	    needsRedraw = false
+	    preRender(polyUI.delta)
+	    if (polyUI.isLayeredMode && separateFrame) renderer.beginFrame(polyUI.master.width, polyUI.master.height, polyUI.pixelRatio)
+	    render()
+	    children?.filter { it !is LayerHolder }?.forEach(Component::draw)
+	    if (polyUI.isLayeredMode && separateFrame) renderer.endFrame()
+	    postRender()
 
         if (fbc > 0) fbc--
         if (binds) {
             renderer as FramebufferController
             renderer.unbindFramebuffer()
-            renderer.drawFramebuffer(framebuffer, x, y)
+	        if (drawResult) renderer.drawFramebuffer(framebuffer, x, y)
         }
     }
 
@@ -339,7 +350,7 @@ abstract class Drawable(
         framebuffer?.let {
             val renderer = renderer as FramebufferController
             renderer.delete(it)
-            framebuffer = renderer.createFramebuffer(width, height)
+            framebuffer = renderer.createFramebuffer(polyUI.master.width, polyUI.master.height)
         }
     }
 
@@ -367,9 +378,9 @@ abstract class Drawable(
         }
         if (!super.setup(polyUI)) return false
         if (polyUI.canUseFramebuffers) {
-            if (countChildren() > polyUI.settings.minDrawablesForFramebuffer || (this === polyUI.master && polyUI.settings.isMasterFrameBuffer)) {
+            if (countChildren() > polyUI.settings.minDrawablesForFramebuffer || (this === polyUI.master && polyUI.settings.isMasterFrameBuffer) || polyUI.settings.explicitFramebuffers && useFramebuffer) {
                 val renderer = renderer as FramebufferController
-                framebuffer = renderer.createFramebuffer(width, height)
+                framebuffer = renderer.createFramebuffer(polyUI.master.width, polyUI.master.height)
                 if (polyUI.settings.debug) PolyUI.LOGGER.info("Drawable ${this.name} created with $framebuffer")
             }
         }

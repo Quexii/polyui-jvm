@@ -28,8 +28,10 @@ import org.polyfrost.polyui.component.impl.*
 import org.polyfrost.polyui.data.FontFamily
 import org.polyfrost.polyui.dsl.polyUI
 import org.polyfrost.polyui.event.State
+import org.polyfrost.polyui.filter.FilterProcessor.Companion.filter
 import org.polyfrost.polyui.renderer.impl.GLFWWindow
 import org.polyfrost.polyui.renderer.impl.NVGRenderer
+import org.polyfrost.polyui.renderer.impl.filter.EmptyFilter
 import org.polyfrost.polyui.unit.Align
 import org.polyfrost.polyui.unit.Vec2
 import org.polyfrost.polyui.unit.by
@@ -48,6 +50,15 @@ fun main() {
         renderer = NVGRenderer
         colors = theme
         backgroundColor = theme.page.bg.normal
+	    settings = Settings().apply {
+			debug = true
+		    layeredUI = true
+		    renderPausingEnabled = true
+		    isMasterFrameBuffer = true
+		    minDrawablesForFramebuffer = 999
+		    framebuffersEnabled = true
+		    explicitFramebuffers = true
+		}
         image("polyfrost.png")
         text("text.dark") {
             fontSize = 20f
@@ -64,7 +75,7 @@ fun main() {
             boxedNumericInput.getTextFromBoxedTextInput().text = value.fix(2).toString()
         }
 
-        group {
+        group(layered = true) {
             Button("moon.svg".image()).add().onClick {
                 shake()
                 false
@@ -79,7 +90,7 @@ fun main() {
         }
         Dropdown("monkey blur", "phosphor blur", "moulberry blur").add()
         BoxedTextInput(pre = "Title:", post = "px").add()
-        var theBox = group {
+        var theBox = group(layered = true) {
             repeat(30) {
                 val len = 32f + (Math.random().toFloat() * 100f)
                 block(size = len by 32f) {

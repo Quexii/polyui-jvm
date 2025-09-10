@@ -80,6 +80,12 @@ class Settings {
     @ApiStatus.Experimental
     var minDrawablesForFramebuffer: Int = 50
 
+	/**
+	 * If true, drawables with
+	 */
+	@ApiStatus.Experimental
+	var explicitFramebuffers: Boolean = false
+
     /**
      * Enable or disable framebuffers. Please note that PolyUI is designed to work with framebuffers, so disabling them may cause performance issues.
      * @see org.polyfrost.polyui.PolyUI
@@ -228,6 +234,15 @@ class Settings {
     @get:JvmName("areRoundedCornersEnabled")
     @set:JvmName("enableRoundedCorners")
     var roundedCorners = true
+
+	/**
+	 * Enable or disable layered UI mode. This allows splitting the UI into multiple layers, which also allows for surface effects for each layer.
+	 * Each layer is rendered separately, and the final result is composited together using multiple draw calls.
+	 */
+	@get:JvmName("isLayeredUIEnabled")
+	@set:JvmName("enableLayeredUI")
+	@ApiStatus.Experimental
+	var layeredUI = false
 
     /** How to handle resource (image and font) loading errors.
      * @see resourcePolicy

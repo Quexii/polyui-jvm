@@ -21,6 +21,8 @@
 
 package org.polyfrost.polyui.data
 
+import java.util.concurrent.atomic.AtomicInteger
+
 /**
  * Class that represents a framebuffer in PolyUI.
  *
@@ -29,7 +31,13 @@ package org.polyfrost.polyui.data
  * The way that PolyUI handles framebuffers is with this class, and it is down to the rendering implementation to handle it with caching, etc.
  */
 data class Framebuffer(val width: Float, val height: Float) {
-    override fun toString(): String {
-        return "Framebuffer($width x $height)"
-    }
+	val instanceId: Int = NEXT_ID.getAndIncrement()
+
+	fun identityCode(): Int = System.identityHashCode(this)
+
+	override fun toString(): String = "Framebuffer#$instanceId($width x $height)"
+
+	companion object {
+		private val NEXT_ID = AtomicInteger(1)
+	}
 }

@@ -250,7 +250,7 @@ fun <S : Block> S.radii(topLeftRadius: Float, topRightRadius: Float, bottomLeftR
 
 
 /**
- * Add a 3D hover effect to the specified drawable which slightly skews the object as the mouse moves across it,
+ * Add a 3D hover filter to the specified drawable which slightly skews the object as the mouse moves across it,
  * giving the appearance of it popping off the screen.
  *
  * @since 1.6.01

@@ -116,7 +116,7 @@ class GLFWWindow @JvmOverloads constructor(
             val stack = Thread.currentThread().stackTrace.drop(4).joinToString("\n\t at ")
             LOGGER.error("${codes[code]} ($code): ${GLFWErrorCallback.getDescription(desc)}\nStack: $stack")
         }
-        if (!glfwInit()) throw RuntimeException("Failed to init GLFW")
+	    if (!glfwInit()) throw RuntimeException("Failed to init GLFW")
 
         if (gl2) {
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2)

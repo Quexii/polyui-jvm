@@ -96,6 +96,7 @@ fun main() {
         ),
         size = 800f by 500f,
         renderer = renderer,
+		settings = Settings().apply { debug = true },
     )
 
     if (!PolyUI.isOnMac) window.setIcon("polyui/icon.png")

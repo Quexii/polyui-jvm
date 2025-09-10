@@ -23,6 +23,8 @@ package org.polyfrost.polyui.renderer
 
 import org.polyfrost.polyui.color.Color
 import org.polyfrost.polyui.data.Font
+import org.polyfrost.polyui.data.GrData
+import org.polyfrost.polyui.data.GrImage
 import org.polyfrost.polyui.data.PolyImage
 import org.polyfrost.polyui.unit.Vec2
 
@@ -167,6 +169,12 @@ interface Renderer : AutoCloseable {
 
     /** Function that can be called to explicitly initialize an image. This is used mainly for getting the size of an image, or to ensure an SVG has been rasterized. */
     fun initImage(image: PolyImage, size: Vec2)
+
+	/** Create a native image, which can be drawn to the screen using [image]. The data is down to you as a rendering implementation.
+	 * @param nativeData the native data for this image. This is down to you as a rendering implementation.
+	 * @return a NativeImage instance, which can be passed to [image].
+	 */
+	fun createNativeImage(nativeData: GrData, width: Float, height: Float): GrImage
 
     /**
      * Draw an image to the screen, per the given parameters.

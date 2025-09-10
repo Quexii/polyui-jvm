@@ -14,8 +14,8 @@ import org.polyfrost.polyui.unit.Vec2;
 
 public class JavaTest {
 	public static void main(String[] args) {
-		long p = Vec2.of(32f, 12f);
-		new Align(Align.Main.Center, Align.Cross.Center, Align.Mode.Horizontal, Vec2.of(32f, 12f), 50);
+		long p = Vec2.Constants.of(32f, 12f);
+		new Align(Align.Content.Center, Align.Content.Center,  Align.Line.Start, Align.Mode.Horizontal, Vec2.Constants.of(32f, 12f), 50);
 		//GLWindow window = new GLWindow("Java Window", 800, 800);
 		//LinkedList<Drawable> things = new LinkedList<>(50);
 		//for (int i = 0; i < 51; i++) { // creates 50 rectangles with random sizes

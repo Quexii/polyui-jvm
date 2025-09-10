@@ -20,28 +20,25 @@
  */
 
 package org.polyfrost.polyui.renderer.impl
-
-import org.apache.logging.log4j.LogManager
-import org.lwjgl.nanovg.NSVGImage
-import org.lwjgl.nanovg.NVGColor
-import org.lwjgl.nanovg.NVGPaint
+import org.apache.logging.log4j.*
+import org.lwjgl.nanovg.*
 import org.lwjgl.nanovg.NanoSVG.*
 import org.lwjgl.nanovg.NanoVG.*
 import org.lwjgl.nanovg.NanoVGGL3.*
-import org.lwjgl.stb.STBImage.stbi_failure_reason
-import org.lwjgl.stb.STBImage.stbi_load_from_memory
-import org.lwjgl.system.MemoryUtil
-import org.polyfrost.polyui.PolyUI
-import org.polyfrost.polyui.data.Font
-import org.polyfrost.polyui.data.PolyImage
-import org.polyfrost.polyui.renderer.Renderer
-import org.polyfrost.polyui.unit.Vec2
+import org.lwjgl.opengl.GL11C
+import org.lwjgl.stb.STBImage.*
+import org.lwjgl.system.*
+import org.polyfrost.polyui.*
+import org.polyfrost.polyui.data.*
+import org.polyfrost.polyui.renderer.*
+import org.polyfrost.polyui.renderer.impl.gl.*
+import org.polyfrost.polyui.unit.*
 import org.polyfrost.polyui.utils.*
-import java.nio.ByteBuffer
-import java.util.IdentityHashMap
+import java.nio.*
+import java.util.*
 import org.polyfrost.polyui.color.PolyColor as Color
 
-object NVGRenderer : Renderer {
+object NVGRenderer : Renderer, FramebufferController {
     @JvmStatic
     private val LOGGER = LogManager.getLogger("PolyUI/NVGRenderer")
     private val nvgPaint: NVGPaint = NVGPaint.malloc()
@@ -90,6 +87,7 @@ object NVGRenderer : Renderer {
         if (drawing) throw IllegalStateException("Already drawing")
         queue.fastRemoveIfReversed { it(); true }
         nvgBeginFrame(vg, width, height, pixelRatio)
+	    nvgGlobalCompositeBlendFunc(vg, NVG_ONE, NVG_ONE_MINUS_SRC_ALPHA)
         drawing = true
     }
 
@@ -198,7 +196,27 @@ object NVGRenderer : Renderer {
         getImage(image, size.x, size.y)
     }
 
-    override fun rect(
+	override fun createNativeImage(nativeData: GrData, width: Float, height: Float): GrImage {
+		require(nativeData.data.isNotEmpty()) { "Native data is empty!" }
+		require(nativeData.data.size == 2) { "Native data must contain exactly 2 elements (texture ID, Image flags)" }
+		require(nativeData.data[0] is Int) { "Native data first element must be an Int (texture ID)" }
+		require(nativeData.data[1] is Int) { "Native data third element must be an Int (image flags)" }
+
+		val glTexture = nativeData.data[0] as Int
+		val imageFlags = nativeData.data[1] as Int
+
+		val nvgImage = nvglCreateImageFromHandle(vg, glTexture, width.toInt(), height.toInt(), imageFlags)
+		val grImage = GrImage(nativeData)
+		require(nvgImage != 0) { "Failed to create NVG image from OpenGL texture handle!" }
+		PolyImage.setImageSize(grImage, Vec2(width, height))
+
+		println("${width.toInt()}, ${height.toInt()}, ${grImage.size}")
+
+		images[grImage] = nvgImage
+		return grImage
+	}
+
+	override fun rect(
         x: Float,
         y: Float,
         width: Float,
@@ -468,7 +486,11 @@ object NVGRenderer : Renderer {
                 images.getOrPut(image) { loadImage(image, image.load { errorHandler(it); defaultImageData!! }.toDirectByteBuffer()) }
             }
 
-            else -> throw NoWhenBranchMatchedException("Please specify image type for $image")
+            else -> {
+				if (image is GrImage) {
+					images[image]!!
+				} else throw NoWhenBranchMatchedException("Please specify image type for $image")
+			}
         }
     }
 
@@ -507,5 +529,52 @@ object NVGRenderer : Renderer {
         nvgDelete(vg)
     }
 
-    private data class NVGFont(val id: Int, val data: ByteBuffer)
+	private object State {
+		val framebuffers = IdentityHashMap<Framebuffer, GlFramebuffer>()
+		var currentFbo: GlFramebuffer? = null
+	}
+
+	override fun createFramebuffer(width: Float, height: Float): Framebuffer {
+		val fbo = GlFramebuffer()
+		fbo.create(width.toInt(), height.toInt())
+		val framebuffer = Framebuffer(width, height)
+		State.framebuffers[framebuffer] = fbo
+
+		val gri = GrImage.put(framebuffer, createNativeImage(GrData(fbo.colorTextureId, NVG_IMAGE_FLIPY or NVG_IMAGE_PREMULTIPLIED or NVG_IMAGE_GENERATE_MIPMAPS), width, height))
+		println("Created framebuffer $framebuffer with GL FBO ${fbo.framebufferId} and texture ${fbo.colorTextureId}, GrImage: $gri")
+		return framebuffer
+	}
+
+	override fun clearFramebuffer(fbo: Framebuffer) {
+		val glFbo = State.framebuffers[fbo] ?: throw IllegalArgumentException()
+		glFbo.clear()
+	}
+
+	override fun bindFramebuffer(fbo: Framebuffer) {
+		val glFbo = State.framebuffers[fbo] ?: throw IllegalArgumentException()
+		glFbo.bind()
+		State.currentFbo = glFbo
+		GL11C.glEnable(GL11C.GL_BLEND)
+		GL11C.glBlendFunc(GL11C.GL_ONE, GL11C.GL_ONE_MINUS_SRC_ALPHA)
+	}
+
+	override fun unbindFramebuffer() {
+		State.currentFbo?.unbind()
+		State.currentFbo = null
+//		GlFramebuffer.unbind0()
+	}
+
+	override fun drawFramebuffer(fbo: Framebuffer, x: Float, y: Float, width: Float, height: Float) {
+		val glFbo = State.framebuffers[fbo] ?: throw IllegalArgumentException()
+		glFbo.draw(x, y, width, height)
+	}
+
+	override fun delete(fbo: Framebuffer?) {
+		val glFbo = State.framebuffers.remove(fbo) ?: return
+		delete(GrImage.get(fbo!!))
+		GrImage.remove(fbo)
+		glFbo.delete()
+	}
+
+	private data class NVGFont(val id: Int, val data: ByteBuffer)
 }

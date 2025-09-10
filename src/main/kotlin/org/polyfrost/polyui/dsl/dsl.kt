@@ -35,6 +35,7 @@ import org.polyfrost.polyui.component.impl.*
 import org.polyfrost.polyui.data.PolyImage
 import org.polyfrost.polyui.input.InputManager
 import org.polyfrost.polyui.input.Translator
+import org.polyfrost.polyui.layer.LayerHolder
 import org.polyfrost.polyui.renderer.Renderer
 import org.polyfrost.polyui.unit.Align
 import org.polyfrost.polyui.unit.AlignDefault
@@ -46,6 +47,9 @@ import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 open class DrawableDSL<T : Drawable>(@PublishedApi internal val _this: T) {
+	@PublishedApi
+	internal val layers = arrayListOf<LayerHolder>()
+
     inline operator fun <S : Drawable> S.invoke(init: (DrawableDSL<S>.(S) -> Unit) = {}): S {
         init(DrawableDSL(this), this)
         _this.addChild(this)
@@ -65,55 +69,59 @@ open class DrawableDSL<T : Drawable>(@PublishedApi internal val _this: T) {
             callsInPlace(init, InvocationKind.EXACTLY_ONCE)
         }
         init(DrawableDSL(this), this)
-        _this.addChild(this)
+	    _this.addChild(this)
         return this
     }
 
-    inline fun <S : Drawable> S.add(init: (DrawableDSL<S>.(S) -> Unit) = {}): S {
+    inline fun <S : Drawable> S.add(layered: Boolean = false, init: (DrawableDSL<S>.(S) -> Unit) = {}): S {
         contract {
             callsInPlace(init, InvocationKind.EXACTLY_ONCE)
         }
         init(DrawableDSL(this), this)
-        _this.addChild(this)
+	    val o = if (layered) LayerHolder(this).also { layers.add(it) } else this
+	    _this.addChild(o)
         return this
     }
 
     @JvmName("block")
-    inline fun block(size: Vec2 = Vec2.ZERO, alignment: Align = AlignDefault, init: (DrawableDSL<Block>.(Block) -> Unit) = {}): Block {
+    inline fun block(size: Vec2 = Vec2.ZERO, alignment: Align = AlignDefault, layered: Boolean = false, init: (DrawableDSL<Block>.(Block) -> Unit) = {}): Block {
         contract {
             callsInPlace(init, InvocationKind.EXACTLY_ONCE)
         }
         val o = Block(size = size, alignment = alignment)
-        init(DrawableDSL(o), o)
-        _this.addChild(o)
+	    init(DrawableDSL(o), o)
+	    val l = if (layered) LayerHolder(o).also { layers.add(it) } else o
+        _this.addChild(l)
         return o
     }
 
-    inline fun image(image: PolyImage, alignment: Align = AlignDefault, init: (Image.() -> Unit) = {}): Image {
+    inline fun image(image: PolyImage, alignment: Align = AlignDefault, layered: Boolean = false, init: (Image.() -> Unit) = {}): Image {
         contract {
             callsInPlace(init, InvocationKind.EXACTLY_ONCE)
         }
         val o = Image(image = image, alignment = alignment)
         init(o)
-        _this.addChild(o)
+	    val l = if (layered) LayerHolder(o).also { layers.add(it) } else o
+	    _this.addChild(l)
         return o
     }
 
-    inline fun image(image: String, alignment: Align = AlignDefault, init: (Image.() -> Unit) = {}): Image {
+    inline fun image(image: String, alignment: Align = AlignDefault, layered: Boolean = false, init: (Image.() -> Unit) = {}): Image {
         contract {
             callsInPlace(init, InvocationKind.EXACTLY_ONCE)
         }
-        return image(image.image(), alignment, init)
+        return image(image.image(), alignment, layered, init)
     }
 
     @JvmName("text")
-    inline fun text(text: String, visibleSize: Vec2 = Vec2.ZERO, alignment: Align = AlignDefault, limited: Boolean = false, init: Text.() -> Unit = {}): Text {
+    inline fun text(text: String, visibleSize: Vec2 = Vec2.ZERO, alignment: Align = AlignDefault, limited: Boolean = false, layered: Boolean = false, init: Text.() -> Unit = {}): Text {
         contract {
             callsInPlace(init, InvocationKind.EXACTLY_ONCE)
         }
         val o = Text(text = text, visibleSize = visibleSize, alignment = alignment, limited = limited)
         init(o)
-        _this.addChild(o)
+	    val l = if (layered) LayerHolder(o).also { layers.add(it) } else o
+	    _this.addChild(l)
         return o
     }
 
@@ -128,24 +136,26 @@ open class DrawableDSL<T : Drawable>(@PublishedApi internal val _this: T) {
     }
 
     @JvmName("textInput")
-    inline fun textInput(text: String = "", visibleSize: Vec2 = Vec2.ZERO, placeholder: String = "polyui.textinput.placeholder", alignment: Align = AlignDefault, init: TextInput.() -> Unit = {}): TextInput {
+    inline fun textInput(text: String = "", visibleSize: Vec2 = Vec2.ZERO, placeholder: String = "polyui.textinput.placeholder", alignment: Align = AlignDefault, layered: Boolean = false, init: TextInput.() -> Unit = {}): TextInput {
         contract {
             callsInPlace(init, InvocationKind.EXACTLY_ONCE)
         }
         val o = TextInput(text = text, visibleSize = visibleSize, placeholder = placeholder, alignment = alignment)
         init(o)
-        _this.addChild(o)
+	    val l = if (layered) LayerHolder(o).also { layers.add(it) } else o
+	    _this.addChild(l)
         return o
     }
 
     @JvmName("group")
-    inline fun group(size: Vec2 = Vec2.ZERO, visibleSize: Vec2 = Vec2.ZERO, alignment: Align = AlignDefault, init: DrawableDSL<Group>.(Group) -> Unit): Group {
+    inline fun group(size: Vec2 = Vec2.ZERO, visibleSize: Vec2 = Vec2.ZERO, alignment: Align = AlignDefault, layered: Boolean = false, init: DrawableDSL<Group>.(Group) -> Unit): Group {
         contract {
             callsInPlace(init, InvocationKind.EXACTLY_ONCE)
         }
         val o = Group(size = size, visibleSize = visibleSize, alignment = alignment)
         init(DrawableDSL(o), o)
-        _this.addChild(o)
+	    val l = if (layered) LayerHolder(o).also { layers.add(it) } else o
+	    _this.addChild(l)
         return o
     }
 
@@ -168,11 +178,15 @@ open class DrawableDSL<T : Drawable>(@PublishedApi internal val _this: T) {
                 _renderer = value
             }
 
-        fun build() = PolyUI(
-            components = _this.children?.toTypedArray() ?: arrayOf(),
-            renderer, settings, inputManager, translator, backgroundColor,
-            alignment, colors ?: DarkTheme(), size
-        ).also { _this.children?.clear() }
+        fun build(): PolyUI {
+	        val components = _this.children?.toTypedArray() ?: emptyArray()
+
+	        return PolyUI(
+		        components = components, renderer, settings, inputManager, translator, backgroundColor, alignment, colors ?: DarkTheme(), size, layers
+	        ).also {
+		        _this.children?.clear()
+	        }
+        }
     }
 }
 

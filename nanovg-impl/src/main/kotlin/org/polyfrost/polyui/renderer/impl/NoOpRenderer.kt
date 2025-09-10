@@ -23,6 +23,8 @@ package org.polyfrost.polyui.renderer.impl
 
 import org.polyfrost.polyui.color.Color
 import org.polyfrost.polyui.data.Font
+import org.polyfrost.polyui.data.GrData
+import org.polyfrost.polyui.data.GrImage
 import org.polyfrost.polyui.data.PolyImage
 import org.polyfrost.polyui.renderer.Renderer
 import org.polyfrost.polyui.unit.Vec2
@@ -87,17 +89,21 @@ object NoOpRenderer : Renderer {
         if (!image.size.isPositive) PolyImage.setImageSize(image, Vec2(18f, 18f))
     }
 
-    override fun image(
-        image: PolyImage,
-        x: Float,
-        y: Float,
-        width: Float,
-        height: Float,
-        colorMask: Int,
-        topLeftRadius: Float,
-        topRightRadius: Float,
-        bottomLeftRadius: Float,
-        bottomRightRadius: Float,
+	override fun createNativeImage(nativeData: GrData, width: Float, height: Float): GrImage {
+		return GrImage(nativeData)
+	}
+
+	override fun image(
+		image: PolyImage,
+		x: Float,
+		y: Float,
+		width: Float,
+		height: Float,
+		colorMask: Int,
+		topLeftRadius: Float,
+		topRightRadius: Float,
+		bottomLeftRadius: Float,
+		bottomRightRadius: Float,
     ) {
     }
 

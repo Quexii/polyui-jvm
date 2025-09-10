@@ -35,6 +35,9 @@ interface FramebufferController {
      */
     fun createFramebuffer(width: Float, height: Float): Framebuffer
 
+	/** Clear the given framebuffer. The framebuffer is guaranteed to be bound when this is called. */
+	fun clearFramebuffer(fbo: Framebuffer)
+
     /** Bind the given framebuffer. */
     fun bindFramebuffer(fbo: Framebuffer)
 

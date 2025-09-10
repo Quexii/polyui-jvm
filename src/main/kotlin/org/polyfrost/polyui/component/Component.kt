@@ -382,7 +382,7 @@ abstract class Component(at: Vec2, size: Vec2, alignment: Align = AlignDefault) 
     /**
      * This method is called every frame, and is used to update the component.
      */
-    open fun draw() {}
+    open fun draw(separateFrame: Boolean = false) {}
 
 
     /**

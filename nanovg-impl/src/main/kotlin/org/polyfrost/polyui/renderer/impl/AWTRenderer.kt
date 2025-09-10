@@ -24,6 +24,8 @@ package org.polyfrost.polyui.renderer.impl
 import org.lwjgl.nanovg.NanoSVG
 import org.polyfrost.polyui.color.Color
 import org.polyfrost.polyui.data.Font
+import org.polyfrost.polyui.data.GrData
+import org.polyfrost.polyui.data.GrImage
 import org.polyfrost.polyui.data.PolyImage
 import org.polyfrost.polyui.renderer.Renderer
 import org.polyfrost.polyui.unit.Vec2
@@ -125,7 +127,11 @@ class AWTRenderer : Renderer {
         getImage(image)
     }
 
-    private fun getImage(image: PolyImage): Image {
+	override fun createNativeImage(nativeData: GrData, width: Float, height: Float): GrImage {
+		return GrImage(nativeData)
+	}
+
+	private fun getImage(image: PolyImage): Image {
         return images.getOrPut(image) {
             if (image.type == PolyImage.Type.Vector) {
                 val d = String(image.load())
