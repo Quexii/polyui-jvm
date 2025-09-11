@@ -210,10 +210,14 @@ object NVGRenderer : Renderer, FramebufferController {
 		require(nvgImage != 0) { "Failed to create NVG image from OpenGL texture handle!" }
 		PolyImage.setImageSize(grImage, Vec2(width, height))
 
-		println("${width.toInt()}, ${height.toInt()}, ${grImage.size}")
-
 		images[grImage] = nvgImage
 		return grImage
+	}
+
+	override fun createNativeImage(framebuffer: Framebuffer, width: Float, height: Float): GrImage {
+		val glFbo = State.framebuffers[framebuffer] ?: throw IllegalArgumentException()
+		val nativeData = GrData(glFbo.colorTextureId, 0)
+		return createNativeImage(nativeData, width, height)
 	}
 
 	override fun rect(
@@ -486,11 +490,12 @@ object NVGRenderer : Renderer, FramebufferController {
                 images.getOrPut(image) { loadImage(image, image.load { errorHandler(it); defaultImageData!! }.toDirectByteBuffer()) }
             }
 
-            else -> {
-				if (image is GrImage) {
-					images[image]!!
-				} else throw NoWhenBranchMatchedException("Please specify image type for $image")
-			}
+            else -> when (image) {
+	            is GrImage -> {
+		            images[image]!!
+	            }
+	            else -> throw NoWhenBranchMatchedException("Please specify image type for $image")
+            }
         }
     }
 

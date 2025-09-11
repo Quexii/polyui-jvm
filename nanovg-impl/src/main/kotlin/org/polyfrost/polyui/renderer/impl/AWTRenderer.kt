@@ -22,8 +22,10 @@
 package org.polyfrost.polyui.renderer.impl
 
 import org.lwjgl.nanovg.NanoSVG
+import org.polyfrost.polyui.PolyUI
 import org.polyfrost.polyui.color.Color
 import org.polyfrost.polyui.data.Font
+import org.polyfrost.polyui.data.Framebuffer
 import org.polyfrost.polyui.data.GrData
 import org.polyfrost.polyui.data.GrImage
 import org.polyfrost.polyui.data.PolyImage
@@ -129,6 +131,10 @@ class AWTRenderer : Renderer {
 
 	override fun createNativeImage(nativeData: GrData, width: Float, height: Float): GrImage {
 		return GrImage(nativeData)
+	}
+
+	override fun createNativeImage(framebuffer: Framebuffer, width: Float, height: Float): GrImage {
+		return GrImage(GrData())
 	}
 
 	private fun getImage(image: PolyImage): Image {

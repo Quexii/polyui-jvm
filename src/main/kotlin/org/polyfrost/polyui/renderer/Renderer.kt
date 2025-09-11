@@ -21,8 +21,10 @@
 
 package org.polyfrost.polyui.renderer
 
+import org.polyfrost.polyui.PolyUI
 import org.polyfrost.polyui.color.Color
 import org.polyfrost.polyui.data.Font
+import org.polyfrost.polyui.data.Framebuffer
 import org.polyfrost.polyui.data.GrData
 import org.polyfrost.polyui.data.GrImage
 import org.polyfrost.polyui.data.PolyImage
@@ -172,9 +174,15 @@ interface Renderer : AutoCloseable {
 
 	/** Create a native image, which can be drawn to the screen using [image]. The data is down to you as a rendering implementation.
 	 * @param nativeData the native data for this image. This is down to you as a rendering implementation.
-	 * @return a NativeImage instance, which can be passed to [image].
+	 * @return a [GrImage] instance, which can be passed to [image].
 	 */
 	fun createNativeImage(nativeData: GrData, width: Float, height: Float): GrImage
+
+	/** Create a native image from a framebuffer, which can be drawn to the screen using [image]. The data is down to you as a rendering implementation.
+	 * @param framebuffer the framebuffer to create the image from.
+	 * @return a [GrImage] instance, which can be passed to [image].
+	 */
+	fun createNativeImage(framebuffer: Framebuffer, width: Float, height: Float): GrImage
 
     /**
      * Draw an image to the screen, per the given parameters.

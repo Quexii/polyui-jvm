@@ -21,24 +21,15 @@
 
 package org.polyfrost.polyui
 
-import org.polyfrost.polyui.color.DarkTheme
-import org.polyfrost.polyui.color.asMutable
+import org.polyfrost.polyui.color.*
 import org.polyfrost.polyui.component.extensions.*
 import org.polyfrost.polyui.component.impl.*
-import org.polyfrost.polyui.data.FontFamily
-import org.polyfrost.polyui.dsl.polyUI
-import org.polyfrost.polyui.event.State
-import org.polyfrost.polyui.filter.FilterProcessor.Companion.filter
-import org.polyfrost.polyui.renderer.impl.GLFWWindow
-import org.polyfrost.polyui.renderer.impl.NVGRenderer
-import org.polyfrost.polyui.renderer.impl.filter.EmptyFilter
-import org.polyfrost.polyui.unit.Align
-import org.polyfrost.polyui.unit.Vec2
-import org.polyfrost.polyui.unit.by
-import org.polyfrost.polyui.unit.fix
-import org.polyfrost.polyui.utils.image
-import org.polyfrost.polyui.utils.open
-import org.polyfrost.polyui.utils.ref
+import org.polyfrost.polyui.data.*
+import org.polyfrost.polyui.dsl.*
+import org.polyfrost.polyui.event.*
+import org.polyfrost.polyui.renderer.impl.*
+import org.polyfrost.polyui.unit.*
+import org.polyfrost.polyui.utils.*
 
 fun main() {
     val window = GLFWWindow("PolyUI Test v2 (DSL)", 800, 500)
